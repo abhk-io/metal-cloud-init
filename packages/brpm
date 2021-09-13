@@ -103,7 +103,6 @@ def generate_spec_contents(args, version_data, tmpl_fn, top_dir, arc_fn):
         subs['systemd'] = False
 
     subs['init_sys'] = args.boot
-    subs['patches'] = [os.path.basename(p) for p in args.patches]
     return templater.render_from_file(tmpl_fn, params=subs)
 
 
@@ -133,10 +132,6 @@ def main():
                               " the final version number"),
                         type=int,
                         default=None)
-    parser.add_argument("-p", "--patch", dest="patches",
-                        help=("include the following patch when building"),
-                        default=[],
-                        action='append')
     args = parser.parse_args()
     capture = True
     if args.verbose:
@@ -153,12 +148,20 @@ def main():
 
         version_data = read_version()
 
+        # rpm does not like '-' in the Version, so change
+        #   X.Y.Z-N-gHASH to X.Y.Z+N.gHASH
+        if "-" in version_data.get('version'):
+            ver, commits, ghash = version_data['version'].split("-")
+            rpm_upstream_version = "%s+%s.%s" % (ver, commits, ghash)
+        else:
+            rpm_upstream_version = version_data['version']
+
         # Archive the code
-        archive_fn = "cloud-init-%s.tar.gz" % version_data['version_long']
+        archive_fn = f"cloud-init-{rpm_upstream_version}.tar.gz"
         real_archive_fn = os.path.join(topdir, 'SOURCES', archive_fn)
         archive_fn = run_helper(
             'make-tarball', ['--long', '--output=' + real_archive_fn])
-        print("Archived the code in %r" % (real_archive_fn))
+        print(f"Archived the code in {real_archive_fn}")
 
         # Form the spec file to be used
         tmpl_fn = util.abs_join(find_root(), 'packages',
@@ -168,14 +171,17 @@ def main():
         spec_fn = util.abs_join(topdir, 'SPECS', 'cloud-init.spec')
         util.write_file(spec_fn, contents)
         print("Created spec file at %r" % (spec_fn))
-        for p in args.patches:
+        for p in glob.glob('*.patch'):
             util.copy(p, util.abs_join(topdir, 'SOURCES', os.path.basename(p)))
 
         # Now build it!
+        subp.subp(['cat', spec_fn], capture=capture)
         default_build_metadata, _ = subp.subp(['git', 'rev-parse', '--short', 'HEAD'], capture=True)
         if not os.environ.get('BUILD_METADATA'):
             os.environ['BUILD_METADATA'] = default_build_metadata.rstrip()
-        print("Running 'rpmbuild' in %r" % (topdir))
+        print(f"Running 'rpmbuild' in {topdir}")
+        debug = ['ls', '-lR', './']
+        subp.subp(debug, capture=capture, env={'BUILD_METADATA': default_build_metadata.rstrip()})
         if args.srpm:
             cmd = ['rpmbuild', '-bs', '--define', f'_topdir {topdir}', '--nodeps', spec_fn]
         else:

@@ -24,14 +24,14 @@
 # Or: http://www.rpm.org/max-rpm/ch-rpm-inside.html
 
 Name:           cloud-init
-Version:        {{rpm_upstream_version}}
-Release:        1{{subrelease}}%{?dist}
+Version:        {{ rpm_upstream_version }}
+Release:        1{{ subrelease }}%{?dist}
 Summary:        Cloud instance init scripts
 Group:          System/Management
 License:        Dual licensed GPLv3 or Apache 2.0
 URL:            http://launchpad.net/cloud-init
 
-Source0:        %{name}-%{version}.tar.gz
+Source0:        {{ archive_name }}
 Source1:        rsyslog-cloud-init.cfg
 Patch1:        datasourceLocalDisk.patch
 # FIXME (lp#1812117)
@@ -48,17 +48,12 @@ Patch6:        cloud-init-purge-cache-py-ver-change.patch
 Patch7:        cloud-init-update-test-characters-in-substitution-unit-test.patch
 
 {% for r in buildrequires -%}
-    BuildRequires:        {{r}}
+    BuildRequires:        {{ r }}
 {% endfor %}
 
 # Install pypi 'dynamic' requirements
 {% for r in requires -%}
-    Requires:       {{r}}
-{% endfor %}
-
-# Custom patches
-{% for p in patches -%}
-    Patch{{loop.index0 + 7}}: {{p}}
+    Requires:       {{ r }}
 {% endfor %}
 
 %if 0%{?is_opensuse}
@@ -88,9 +83,9 @@ ssh keys and to let the user run various scripts.
 
 %package config-suse
 Summary:        Configuration file for Cloud node initialization tool
-Provides:	    cloud-init-config = %configver
+Provides:        cloud-init-config = %configver
 Group:          System/Management
-Conflicts:	    otherproviders(cloud-init-config)
+Conflicts:        otherproviders(cloud-init-config)
 
 %description config-suse
 This package contains the product specific configuration file
@@ -116,10 +111,6 @@ Documentation and examples for cloud-init tools
 %patch5
 %patch6
 %patch7 -p1
-{% for p in patches -%}
-    %patch{{loop.index0 + 7}} -p1
-    end for
-{% endfor %}
 
 # patch in the full version to version.py
 version_pys=$(find . -name version.py -type f)
