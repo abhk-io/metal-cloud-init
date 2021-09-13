@@ -97,10 +97,6 @@ version_pys=$(cd "%{buildroot}" && find . -name version.py -type f)
 %{_bindir}/cloud-init*
 %{_bindir}/cloud-id*
 
-# systemd files
-/usr/lib/systemd/system-generators/*
-/usr/lib/systemd/system/*
-
 # There doesn't seem to be an agreed upon place for these
 # although it appears the standard says /usr/lib but rpmbuild
 # will try /usr/lib64 ??
