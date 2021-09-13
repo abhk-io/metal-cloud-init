@@ -1,0 +1,98 @@
+
+Search
+ Cloud:Tools
+ cloud-init
+cloud-init-purge-cache-py-ver-change.patch
+Overview Repositories Revisions Requests Users Attributes Meta
+File cloud-init-purge-cache-py-ver-change.patch of Package cloud-init
+1
+--- cloudinit/cmd/main.py.orig
+2
++++ cloudinit/cmd/main.py
+3
+@@ -210,6 +210,24 @@ def attempt_cmdline_url(path, network=Tr
+4
+             "wrote cloud-config data from %s='%s' to %s" %
+5
+             (cmdline_name, url, path))
+6
+
+7
++def cache_pyver_maybe_purge_cache(init):
+8
++    """Check if the Python version changed on us"""
+9
++    pyver = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
+10
++    pyrefver = os.path.join(init.paths.get_cpath('data'), 'python-version')
+11
++    if os.path.exists(pyrefver):
+12
++        cached_pyver = open(pyrefver).read()
+13
++        # The Python version has changed out from under us, anything that was
+14
++        # pickled previously is likely useless due to API changes.
+15
++        if cached_pyver != pyver:
+16
++            LOG.debug('Python version change detected purging cache')
+17
++            init.purge_cache(True)
+18
++    else:
+19
++        LOG.debug(
+20
++            'Could not determine Python version used to write cache, purging'
+21
++        )
+22
++        init.purge_cache(True)
+23
++    util.write_file(pyrefver, pyver)
+24
++
+25
+
+26
+ def main_init(name, args):
+27
+     deps = [sources.DEP_FILESYSTEM, sources.DEP_NETWORK]
+28
+@@ -277,6 +295,7 @@ def main_init(name, args):
+29
+         util.logexc(LOG, "Failed to initialize, likely bad things to come!")
+30
+     # Stage 4
+31
+     path_helper = init.paths
+32
++    cache_pyver_maybe_purge_cache(init)
+33
+     mode = sources.DSMODE_LOCAL if args.local else sources.DSMODE_NETWORK
+34
+
+35
+     if mode == sources.DSMODE_NETWORK:
+36
+​
+HELP
+OpenBuildService.org
+Documentation
+API Documentation
+CONTACT
+Support
+@OBShq
+Terms
+OPENSUSE BUILD SERVICE IS SPONSORED BY
+
+
+
+
+
+The Open Build Service is an openSUSE project.
+
+Sign Up
+Log In
+Places
